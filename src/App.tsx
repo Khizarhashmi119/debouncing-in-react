@@ -1,26 +1,45 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 
-function App() {
+const getTodoList = async () => {
+  const res = await fetch(
+    "https://jsonplaceholder.typicode.com/todos?_limit=10"
+  );
+  const data = await res.json();
+  console.log(data);
+};
+
+const App = () => {
+  const [text, setText] = useState<string | null>(null);
+  const shouldUseEffectRun = useRef(false);
+
+  useEffect(() => {
+    if (shouldUseEffectRun.current) {
+      let timer: NodeJS.Timeout | null = null;
+
+      shouldUseEffectRun.current = false;
+      timer = setTimeout(() => getTodoList(), 1000);
+
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
+    }
+  }, [text]);
+
+  const handleChangeText = (e: ChangeEvent<HTMLInputElement>) => {
+    const {
+      target: { value },
+    } = e;
+
+    shouldUseEffectRun.current = true;
+    setText(value);
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div className="app">
+      <h1>Hello from react with typescript</h1>
+      <input type="text" value={text ?? ""} onChange={handleChangeText} />
     </div>
   );
-}
+};
 
 export default App;
