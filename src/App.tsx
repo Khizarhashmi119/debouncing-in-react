@@ -1,43 +1,75 @@
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import * as React from "react";
 
-const getTodoList = async () => {
-  const res = await fetch(
-    "https://jsonplaceholder.typicode.com/todos?_limit=10"
-  );
-  const data = await res.json();
-  console.log(data);
+import { IUser, IUsersResponse } from "./types";
+
+const getUsers = async (name: string): Promise<IUsersResponse | null> => {
+  try {
+    const res = await fetch(
+      `https://dummyjson.com/users/search?q=${encodeURIComponent(name)}`
+    );
+
+    if (!res.ok) throw Error(res.statusText, { cause: res.status });
+    return (await res.json()) as IUsersResponse;
+  } catch (error) {
+    console.error({ error });
+    return null;
+  }
 };
 
 const App = () => {
-  const [text, setText] = useState<string | null>(null);
-  const shouldUseEffectRun = useRef(false);
+  const [name, setName] = React.useState<string | null>(null);
+  const [users, setUsers] = React.useState<IUser[]>([]);
+  const [isTodosLoading, setIsTodosLoading] = React.useState(false);
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (shouldUseEffectRun.current) {
-      let timer: NodeJS.Timeout | null = null;
+  React.useEffect(() => {
+    if (name) {
+      timeoutRef.current = setTimeout(() => {
+        setIsTodosLoading(true);
 
-      shouldUseEffectRun.current = false;
-      timer = setTimeout(() => getTodoList(), 1000);
+        getUsers(name)
+          .then((value) => {
+            const users = value?.users;
 
-      return () => {
-        if (timer) clearTimeout(timer);
-      };
+            if (users) {
+              setUsers(users);
+            } else {
+              setUsers([]);
+            }
+          })
+          .finally(() => setIsTodosLoading(false));
+      }, 1000);
     }
-  }, [text]);
 
-  const handleChangeText = (e: ChangeEvent<HTMLInputElement>) => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [name]);
+
+  const handleChangeText = (event: React.ChangeEvent<HTMLInputElement>) => {
     const {
       target: { value },
-    } = e;
+    } = event;
 
-    shouldUseEffectRun.current = true;
-    setText(value);
+    setName(value);
   };
 
   return (
     <div className="app">
       <h1>Hello from react with typescript</h1>
-      <input type="text" value={text ?? ""} onChange={handleChangeText} />
+      <input
+        type="text"
+        placeholder="Search name"
+        value={name || ""}
+        onChange={handleChangeText}
+      />
+      <pre>
+        {!isTodosLoading ? (
+          JSON.stringify(users, undefined, 4)
+        ) : (
+          <div>Loading</div>
+        )}
+      </pre>
     </div>
   );
 };
